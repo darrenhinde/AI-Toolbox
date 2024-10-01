@@ -1,0 +1,8 @@
+# Engineering Conventions
+
+## Conventions
+> When writing code, follow these conventions
+
+- Write simple, verbose code over terse, companct, dense code. 
+- If a function does not have a corresponding test, mention it. 
+- When building a tests, don't mock anything. 

@@ -1,0 +1,21 @@
+{
+  "name": "ai-toolbox",
+  "version": "0.0.0",
+
+  "license": "MIT",
+  "node": "20.14.00",
+  "scripts": {},
+  "private": true,
+  "dependencies": {},
+  "devDependencies": {
+    "@tsconfig/node20": "^20.1.4",
+    "@tsconfig/node18": "^18.2.4",
+    "@types/node": "^20.14.11",
+    "typescript": "^5.5.3",
+    "vitest": "^2.0.3"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "packageManager": "bun@1.0.12"
+}
