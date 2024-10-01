@@ -1,12 +1,11 @@
 {
   "name": "ai-toolbox",
   "version": "0.0.0",
-
   "license": "MIT",
   "node": "20.14.00",
   "scripts": {},
   "private": true,
-  "dependencies": {},
+  "dependencies": { "@notionhq/client": "^2.2.15" },
   "devDependencies": {
     "@tsconfig/node20": "^20.1.4",
     "@tsconfig/node18": "^18.2.4",
