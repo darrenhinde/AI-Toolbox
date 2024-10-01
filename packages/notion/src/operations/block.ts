@@ -1,30 +1,30 @@
 import { NotionAPI } from '../utils/api';
-import { BlockContent, UpdateBlockParameters, BlockId, Block, BlockDeletionResponse } from '../types/block';
+import { BlockContent, UpdateBlockParameters, BlockId, Block, BlockDeletionResponse, PaginationParameters, ApiResponse } from '../types/block';
 
 // Function to create a new block
-export async function create_block(
+export async function createBlock(
   apiKey: string,
   pageId: string,
-  blockContent?: Partial<BlockContent>,
+  blockContent: BlockContent
 ): Promise<Block> {
   const api = new NotionAPI(apiKey);
-  const defaultBlock: BlockContent = {
-    type: 'paragraph',
-    paragraph: {
-      rich_text: [{ type: 'text', text: { content: 'Default text block' } }],
-    },
-  };
-
   const data = {
-    parent: { page_id: pageId },
-    ...(blockContent || defaultBlock),
+    children: [blockContent],
   };
+  return api.request('PATCH', `/blocks/${pageId}/children`, data);
+}
 
-  return api.request('POST', '/blocks', data);
+// Function to retrieve a block
+export async function retrieveBlock(
+  apiKey: string,
+  blockId: BlockId
+): Promise<Block> {
+  const api = new NotionAPI(apiKey);
+  return api.request('GET', `/blocks/${blockId}`);
 }
 
 // Function to update an existing block
-export async function update_block(
+export async function updateBlock(
   apiKey: string,
   blockId: BlockId,
   updateParams: UpdateBlockParameters
@@ -34,7 +34,7 @@ export async function update_block(
 }
 
 // Function to delete a block
-export async function delete_block(
+export async function deleteBlock(
   apiKey: string,
   blockId: BlockId
 ): Promise<BlockDeletionResponse> {
@@ -42,11 +42,13 @@ export async function delete_block(
   return api.request('DELETE', `/blocks/${blockId}`);
 }
 
-// Function to retrieve a block
-export async function retrieve_block(
+// Function to list child blocks
+export async function listChildBlocks(
   apiKey: string,
-  blockId: BlockId
-): Promise<Block> {
+  blockId: BlockId,
+  paginationParams?: PaginationParameters
+): Promise<ApiResponse<Block>> {
   const api = new NotionAPI(apiKey);
-  return api.request('GET', `/blocks/${blockId}`);
+  const queryParams = new URLSearchParams(paginationParams as Record<string, string>).toString();
+  return api.request('GET', `/blocks/${blockId}/children${queryParams ? `?${queryParams}` : ''}`);
 }

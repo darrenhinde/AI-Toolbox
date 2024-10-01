@@ -6,12 +6,14 @@ export async function create_database(
   parentPageId: string,
   title: string,
   properties: DatabaseProperties,
+  isInline: boolean = false,
 ) {
   const api = new NotionAPI(apiKey);
   const data = {
     parent: { page_id: parentPageId },
     title: [{ type: 'text', text: { content: title } }],
     properties,
+    is_inline: isInline,
   };
   return api.request('POST', '/databases', data);
 }

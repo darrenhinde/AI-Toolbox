@@ -1,8 +1,40 @@
-import { Client } from '@notionhq/client';
 
-export type Block = Awaited<ReturnType<Client['blocks']['retrieve']>>;
-export type BlockContent = Parameters<Client['blocks']['children']['append']>[0]['children'][0];
-export type UpdateBlockParameters = Parameters<Client['blocks']['update']>[0];
+export type Block = {
+  object: 'block';
+  id: string;
+  parent: {
+    type: 'page_id' | 'block_id' | 'database_id';
+    page_id?: string;
+    block_id?: string;
+    database_id?: string;
+  };
+  created_time: string;
+  last_edited_time: string;
+  created_by: {
+    object: 'user';
+    id: string;
+  };
+  last_edited_by: {
+    object: 'user';
+    id: string;
+  };
+  has_children: boolean;
+  archived: boolean;
+  in_trash: boolean;
+  type: string;
+  [key: string]: any;
+};
+
+export type BlockContent = {
+  type: string;
+  [key: string]: any;
+};
+
+export type UpdateBlockParameters = {
+  block_id: string;
+  [key: string]: any;
+};
+
 export type BlockId = string;
 
 // Add a type for the API response
