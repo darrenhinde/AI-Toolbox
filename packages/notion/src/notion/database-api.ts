@@ -10,63 +10,42 @@ export class DatabaseAPI {
 
   async createPostingScheduleDatabase(parentPageId: string, title: string) {
     try {
-      const response = await this.notionClient.getClient().pages.create({
+      const database = await this.createDatabase({
         parent: { page_id: parentPageId },
-        properties: {},
-        children: [
-          {
-            object: 'block',
-            type: 'table',
-            table: {
-              table_width: 5,
-              has_column_header: true,
-              has_row_header: false,
-              children: [
-                {
-                  type: 'table_row',
-                  table_row: {
-                    cells: [
-                      [{ type: 'text', text: { content: 'Date' } }],
-                      [{ type: 'text', text: { content: 'Name' } }],
-                      [{ type: 'text', text: { content: 'Platform' } }],
-                      [{ type: 'text', text: { content: 'Time' } }],
-                      [{ type: 'text', text: { content: 'Post Description' } }]
-                    ]
-                  }
-                },
-                ...this.generateSampleRows()
-              ]
-            }
-          }
-        ]
+        title: [{ type: "text", text: { content: title } }],
+        properties: {
+          Date: { title: {} },
+          Name: { rich_text: {} },
+          Platform: { select: {} },
+          Time: { rich_text: {} },
+          "Post Description": { rich_text: {} },
+        },
       });
 
-      return response;
+      const dates = [
+        new Date().toISOString().split('T')[0],
+        new Date(Date.now() + 86400000).toISOString().split('T')[0],
+        new Date(Date.now() + 172800000).toISOString().split('T')[0],
+      ];
+
+      for (const date of dates) {
+        await this.createDatabaseItem(database.id, {
+          parent: { database_id: database.id },
+          properties: {
+            Date: { title: [{ text: { content: date } }] },
+            Name: { rich_text: [{ text: { content: "Sample Post" } }] },
+            Platform: { select: { name: "Twitter" } },
+            Time: { rich_text: [{ text: { content: "12:00 PM" } }] },
+            "Post Description": { rich_text: [{ text: { content: "This is a sample post description." } }] },
+          },
+        });
+      }
+
+      return database;
     } catch (error) {
       console.error("Error creating posting schedule database:", error);
       throw error;
     }
-  }
-
-  private generateSampleRows() {
-    const dates = [
-      new Date().toISOString().split('T')[0],
-      new Date(Date.now() + 86400000).toISOString().split('T')[0],
-      new Date(Date.now() + 172800000).toISOString().split('T')[0],
-    ];
-
-    return dates.map(date => ({
-      type: 'table_row',
-      table_row: {
-        cells: [
-          [{ type: 'text', text: { content: date } }],
-          [{ type: 'text', text: { content: 'Sample Post' } }],
-          [{ type: 'text', text: { content: 'Twitter' } }],
-          [{ type: 'text', text: { content: '12:00 PM' } }],
-          [{ type: 'text', text: { content: 'This is a sample post description.' } }]
-        ]
-      }
-    }));
   }
 
   async createDatabaseItem(databaseId: string, params: CreatePageParameters) {
