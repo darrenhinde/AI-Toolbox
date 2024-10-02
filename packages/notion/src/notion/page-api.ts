@@ -27,12 +27,11 @@ export class PageAPI {
       throw error;
     }
   }
-
-  async updatePage(pageId: string, params: UpdatePageParameters) {
+  async updatePage(pageId: string, updates: { properties: Record<string, any> }) {
     try {
       const response = await this.notionClient.getClient().pages.update({
         page_id: pageId,
-        ...params,
+        properties: updates.properties,
       });
       return response;
     } catch (error) {
@@ -40,6 +39,7 @@ export class PageAPI {
       throw error;
     }
   }
+  
 
   async archivePage(pageId: string) {
     try {
