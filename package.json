@@ -1,11 +1,12 @@
 {
   "name": "ai-toolbox",
   "version": "0.0.0",
-  "license": "MIT",
-  "node": "20.14.00",
-  "scripts": {},
   "private": true,
-  "dependencies": { "@notionhq/client": "^2.2.15" },
+  "workspaces": ["packages/*", "vercel-agents/*"],
+  "packageManager": "bun@1.0.12",
+  "dependencies": {
+    "@notionhq/client": "^2.2.15"
+  },
   "devDependencies": {
     "@tsconfig/node20": "^20.1.4",
     "@tsconfig/node18": "^18.2.4",
@@ -13,8 +14,5 @@
     "typescript": "^5.5.3",
     "vitest": "^2.0.3"
   },
-  "workspaces": [
-    "packages/*"
-  ],
-  "packageManager": "bun@1.0.12"
+  "types": "dist/index.d.ts"
 }

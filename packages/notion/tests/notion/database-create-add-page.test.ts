@@ -16,17 +16,18 @@ describe('DatabaseAPI', () => {
     pageAPI = new PageAPI(notionClient);
   });
 
-  it('should create a database with three properties', async () => {
+  it('should create an inline database with three properties', async () => {
     const newDatabase = await databaseAPI.createDatabase({
       parent: { page_id: TEST_PAGE_ID },
       title: [
         {
           type: 'text',
           text: {
-            content: 'Test COntent',
+            content: 'Test Content',
           },
         },
       ],
+      is_inline: true,
       properties: {
         Name: {
           title: {},
@@ -53,7 +54,7 @@ describe('DatabaseAPI', () => {
     testDatabaseId = newDatabase.id;
   });
 
-  it('should add three different pages to the database', async () => {
+  it('should add three different pages to the inline database', async () => {
     const pages = [
       {
         Name: 'Task 1',
@@ -101,7 +102,7 @@ describe('DatabaseAPI', () => {
     }
   });
 
-  it('should query the database and return three pages', async () => {
+  it('should query the inline database and return three pages', async () => {
     const queryParams: QueryDatabaseParameters = {
       database_id: testDatabaseId,
       page_size: 10,

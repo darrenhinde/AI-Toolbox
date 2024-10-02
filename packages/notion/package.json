@@ -1,7 +1,6 @@
 {
-  "name": "@your-org/notion",
+  "name": "@ai-toolbox/notion",
   "version": "0.1.0",
-  "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
@@ -11,11 +10,15 @@
   },
   "dependencies": {
     "@notionhq/client": "^2.2.14",
+    "ai": "^3.4.7",
     "axios": "^0.27.2",
     "dotenv": "^16.0.3"
   },
   "devDependencies": {
     "@types/node": "^18.16.3",
     "typescript": "^5.0.4"
+  },
+  "exports": {
+    "./*": ["./src/*/index.ts", "./src/*.ts", "./src/*.tsx"]
   }
 }
