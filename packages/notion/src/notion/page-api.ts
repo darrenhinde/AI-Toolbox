@@ -1,5 +1,5 @@
 import { NotionClient } from './notion-client';
-import { CreatePageParameters, UpdatePageParameters, GetPageResponse } from '@notionhq/client/build/src/api-endpoints';
+import { CreatePageParameters, UpdatePageParameters, GetPageResponse, BlockObjectRequest } from '@notionhq/client/build/src/api-endpoints';
 
 export interface PageProperties {
   title: {
@@ -9,16 +9,22 @@ export interface PageProperties {
   }
 }
 
-export interface BlockContent {
-  object: 'block';
-  type: 'paragraph';
-  paragraph: {
-    rich_text: Array<{
-      type: 'text';
-      text: { content: string }
-    }>
-  }
+export interface RichText {
+  type: 'text';
+  text: { content: string; link?: { url: string } | null };
+  annotations?: {
+    bold?: boolean;
+    italic?: boolean;
+    strikethrough?: boolean;
+    underline?: boolean;
+    code?: boolean;
+    color?: 'default' | 'gray' | 'brown' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | 'red' | 'gray_background' | 'brown_background' | 'orange_background' | 'yellow_background' | 'green_background' | 'blue_background' | 'purple_background' | 'pink_background' | 'red_background';
+  };
+  plain_text?: string;
+  href?: string | null;
 }
+
+export type BlockContent = BlockObjectRequest;
 
 export class NotionPageAPI {
   private notionClient: NotionClient;
@@ -44,22 +50,14 @@ export class NotionPageAPI {
           }
         }
       ]
-    } as CreatePageParameters);
+    });
     return response.id;
   }
 
-  async appendToPage(pageId: string, content: string): Promise<void> {
+  async appendToPage(pageId: string, blocks: BlockObjectRequest[]): Promise<void> {
     await this.notionClient.getClient().blocks.children.append({
       block_id: pageId,
-      children: [
-        {
-          object: 'block',
-          type: 'paragraph',
-          paragraph: {
-            rich_text: [{ type: 'text', text: { content } }]
-          }
-        }
-      ]
+      children: blocks
     });
   }
 
@@ -71,7 +69,7 @@ export class NotionPageAPI {
           title: [{ text: { content: newTitle } }]
         }
       }
-    } as UpdatePageParameters);
+    });
   }
 
   async getPage(pageId: string): Promise<GetPageResponse> {
@@ -82,7 +80,7 @@ export class NotionPageAPI {
     return await this.notionClient.getClient().pages.update({
       page_id: pageId,
       archived: true,
-    } as UpdatePageParameters);
+    });
   }
 }
 

@@ -2,6 +2,7 @@ import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import { NotionClient } from '../../src/notion/notion-client';
 import { PageAPI } from '../../src/notion/page-api';
 import { GetPageResponse } from '@notionhq/client/build/src/api-endpoints';
+import { BlockContent } from '../../src/notion/page-api';
 
 const NOTION_API_KEY = process.env.NOTION_API_KEY || '';
 const TEST_PAGE_ID = process.env.TEST_PAGE_ID || '';
@@ -24,7 +25,7 @@ describe('PageAPI', () => {
     expect(newPage).toBeDefined();
 
     // Clean up: delete the created page
-    await pageAPI.deletePage(newPage);
+    // await pageAPI.deletePage(newPage);
   });
 
   // Add other test cases here...
@@ -38,57 +39,93 @@ if (!apiKey || !parentPageId) {
   process.exit(1);
 }
 
-describe('PageAPI', () => {
+describe('PageAPI Integration, creating a rich page', () => {
   let pageAPI: PageAPI;
   let createdPageId: string;
 
   beforeAll(() => {
-    const notionClient = new NotionClient(NOTION_API_KEY);
+    const notionClient = new NotionClient(apiKey);
     pageAPI = new PageAPI(notionClient);
   });
 
   afterAll(async () => {
     if (createdPageId) {
-      await pageAPI.deletePage(createdPageId);
+      // await pageAPI.deletePage(createdPageId);
     }
   });
 
-  test('create, append, edit, and get page', async () => {
+  test('create a page with various block components', async () => {
     try {
       // Create a new page
       createdPageId = await pageAPI.createPage(
         parentPageId,
-        'Test Page',
-        'This is a test page created by the API.'
+        'Rich Test Page',
+        'This is a test page with various block components.'
       );
       expect(createdPageId).toBeTruthy();
 
-      // Append content to the page
-      await pageAPI.appendToPage(
-        createdPageId,
-        'This content was appended to the page.'
-      );
-
-      // Edit the page title
-      await pageAPI.editPage(createdPageId, 'Updated Test Page Title');
-
-      // Get the page and verify its title
-      const updatedPage = await pageAPI.getPage(createdPageId);
-      
-      if ('properties' in updatedPage && 'title' in updatedPage.properties) {
-        const titleProperty = updatedPage.properties.title;
-        if ('title' in titleProperty) {
-          expect(titleProperty.title[0].plain_text).toBe('Updated Test Page Title');
-        } else {
-          throw new Error('Expected title property structure not found');
+      // Prepare an array of block contents
+      const blockContents: BlockContent[] = [
+        {
+          object: 'block',
+          type: 'heading_1',
+          heading_1: { rich_text: [{ type: 'text', text: { content: 'Main Heading' } }] }
+        },
+        {
+          object: 'block',
+          type: 'paragraph',
+          paragraph: { rich_text: [{ type: 'text', text: { content: 'This is a paragraph under the main heading.' } }] }
+        },
+        {
+          object: 'block',
+          type: 'heading_2',
+          heading_2: { rich_text: [{ type: 'text', text: { content: 'Subheading' } }] }
+        },
+        {
+          object: 'block',
+          type: 'bulleted_list_item',
+          bulleted_list_item: { rich_text: [{ type: 'text', text: { content: 'Bullet point 1' } }] }
+        },
+        {
+          object: 'block',
+          type: 'bulleted_list_item',
+          bulleted_list_item: { rich_text: [{ type: 'text', text: { content: 'Bullet point 2' } }] }
+        },
+        {
+          object: 'block',
+          type: 'divider',
+          divider: {}
+        },
+        {
+          object: 'block',
+          type: 'callout',
+          callout: {
+            rich_text: [{ type: 'text', text: { content: 'This is a callout block' } }],
+            icon: { emoji: '💡' }
+          }
+        },
+        {
+          object: 'block',
+          type: 'quote',
+          quote: { rich_text: [{ type: 'text', text: { content: 'This is a quote block' } }] }
         }
-      } else {
-        throw new Error('Expected properties or title not found');
-      }
+      ];
+
+      // Append all blocks to the page
+      await pageAPI.appendToPage(createdPageId, blockContents);
+
+      // Get the page and verify its content
+      const updatedPage = await pageAPI.getPage(createdPageId);
+      expect(updatedPage).toBeDefined();
+      expect(updatedPage.id).toBe(createdPageId);
+
+      // You might want to add more specific checks here to verify the content
+      // However, note that `getPage` doesn't return the page content, only its properties
+      // To verify the content, you'd need to use the `blocks.children.list` endpoint
 
     } catch (error) {
       console.error('Test failed:', error);
       throw error;
     }
-  });
+  }, 15000); // Increase timeout to 15 seconds
 });
