@@ -1,3 +1,4 @@
+import { describe, test, expect, beforeAll } from "bun:test";
 import { NotionClient } from '../../src/notion/notion-client';
 import { DatabaseAPI } from '../../src/notion/database-api';
 import { UpdateDatabaseParameters, QueryDatabaseParameters } from "@notionhq/client/build/src/api-endpoints";
@@ -13,7 +14,7 @@ describe('DatabaseAPI', () => {
     databaseAPI = new DatabaseAPI(notionClient);
   });
 
-  it('should create a database', async () => {
+  test('should create a database', async () => {
     const newDatabase = await databaseAPI.createDatabase({
       parent: { page_id: TEST_PAGE_ID },
       title: [
@@ -39,13 +40,13 @@ describe('DatabaseAPI', () => {
     testDatabaseId = newDatabase.id;
   });
 
-  it('should retrieve a database', async () => {
+  test('should retrieve a database', async () => {
     const database = await databaseAPI.getDatabase(testDatabaseId);
     expect(database).toBeDefined();
     expect(database.id).toBe(testDatabaseId);
   });
 
-  it('should update a database', async () => {
+  test('should update a database', async () => {
     const updateParams: UpdateDatabaseParameters = {
       database_id: testDatabaseId,
       title: [
@@ -63,7 +64,7 @@ describe('DatabaseAPI', () => {
     expect(updatedDatabase.id).toBe(testDatabaseId);
   });
 
-  it('should query a database', async () => {
+  test('should query a database', async () => {
     const queryParams: QueryDatabaseParameters = {
       database_id: testDatabaseId,
       page_size: 10,
@@ -74,7 +75,7 @@ describe('DatabaseAPI', () => {
     expect(Array.isArray(queryResult.results)).toBe(true);
   });
 
-  it('should archive a database', async () => {
+  test('should archive a database', async () => {
     await databaseAPI.deleteDatabase(testDatabaseId);
 
     // Retrieve the database and check if it's archived
