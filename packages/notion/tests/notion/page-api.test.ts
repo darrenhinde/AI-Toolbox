@@ -2,7 +2,7 @@ import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import { NotionClient } from '../../src/notion/notion-client';
 import { PageAPI } from '../../src/notion/page-api';
 import { GetPageResponse } from '@notionhq/client/build/src/api-endpoints';
-import { BlockContent } from '../../src/notion/page-api';
+import { BlockContent, RichText } from '../../src/notion/page-api';
 
 const NOTION_API_KEY = process.env.NOTION_API_KEY || '';
 const TEST_PAGE_ID = process.env.TEST_PAGE_ID || '';
@@ -54,15 +54,27 @@ describe('PageAPI Integration, creating a rich page', () => {
     }
   });
 
-  test('create a page with various block components', async () => {
+  test('create a page with various block components and rich text', async () => {
     try {
       // Create a new page
       createdPageId = await pageAPI.createPage(
         parentPageId,
         'Rich Test Page',
-        'This is a test page with various block components.'
+        'This is a test page with various block components and rich text.'
       );
       expect(createdPageId).toBeTruthy();
+
+      const coloredText: RichText = {
+        type: 'text',
+        text: { content: 'This text is blue and bold' },
+        annotations: { bold: true, color: 'blue' }
+      };
+
+      const backgroundColoredText: RichText = {
+        type: 'text',
+        text: { content: 'This text has a yellow background' },
+        annotations: { color: 'yellow_background' }
+      };
 
       // Prepare an array of block contents
       const blockContents: BlockContent[] = [
@@ -108,6 +120,38 @@ describe('PageAPI Integration, creating a rich page', () => {
           object: 'block',
           type: 'quote',
           quote: { rich_text: [{ type: 'text', text: { content: 'This is a quote block' } }] }
+        },
+        {
+          object: 'block',
+          type: 'paragraph',
+          paragraph: { rich_text: [coloredText] }
+        },
+        {
+          object: 'block',
+          type: 'paragraph',
+          paragraph: { rich_text: [backgroundColoredText] }
+        },
+        {
+          object: 'block',
+          type: 'toggle',
+          toggle: {
+            rich_text: [{ type: 'text', text: { content: 'This is a toggle block' } }],
+            children: [
+              {
+                object: 'block',
+                type: 'paragraph',
+                paragraph: { rich_text: [{ type: 'text', text: { content: 'Hidden content' } }] }
+              }
+            ]
+          }
+        },
+        {
+          object: 'block',
+          type: 'code',
+          code: {
+            rich_text: [{ type: 'text', text: { content: 'console.log("Hello, World!");' } }],
+            language: 'javascript'
+          }
         }
       ];
 
