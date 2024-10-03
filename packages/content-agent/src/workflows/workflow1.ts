@@ -1,4 +1,4 @@
-import { runAgent1 } from "../standard-call/agents.js";
+import { runAgent1 } from "../single-agents/content-idea-agent.js";
 
 export async function workflow1(userInput) {
   // Step 1: Run Agent 1

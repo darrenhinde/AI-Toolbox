@@ -1,4 +1,4 @@
-import { runContentGenerationAgent } from '../../src/standard-call/agents';
+import { runContentGenerationAgent } from '../../src/single-agents/content-idea-agent';
 
 async function testContentGenerationAgent() {
   const topic = "Artificial Intelligence in Healthcare";
