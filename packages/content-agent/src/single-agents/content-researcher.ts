@@ -1,6 +1,6 @@
-import { generateText } from 'ai';
+import { generateObject } from 'ai';
 import { z } from 'zod';
-import { openai } from '@ai-sdk/openai';
+import { getModel } from '../models/index';
 
 const ContentResearchInput = z.object({
   campaignGoals: z.array(z.string()),
@@ -23,7 +23,9 @@ const ContentIdeasOutput = z.array(ContentIdea);
 export const contentResearcher = async (input: z.infer<typeof ContentResearchInput>): Promise<z.infer<typeof ContentIdeasOutput>> => {
   const { campaignGoals, targetAudience, industry, previousContent } = input;
 
-  const systemPrompt = `
+  const model = getModel();
+
+  const prompt = `
 You are a Content Researcher with expertise in ${industry}. Your role is to generate innovative content ideas that align with the following campaign goals: ${campaignGoals.join(', ')}. Consider the interests of the target audience: ${targetAudience.join(', ')}. Avoid repeating topics from previous content.
 
 Provide a list of content ideas with the following structure:
@@ -37,18 +39,13 @@ Provide a list of content ideas with the following structure:
 Ensure that each idea is unique, relevant, and valuable to the target audience.
 `;
 
-  const userPrompt = `Generate content ideas based on the above information.`;
-
-  const response = await generateText({
-    model: openai('gpt-4'),
-    prompt: systemPrompt + '\n' + userPrompt,
+  const { object: ideas } = await generateObject({
+    model,
+    schema: ContentIdeasOutput,
+    prompt,
     maxTokens: 1500,
     temperature: 0.7,
   });
 
-  // Parse the response and validate it against the ContentIdeasOutput schema
-  const ideas = JSON.parse(response.text);
-  const parsedIdeas = ContentIdeasOutput.parse(ideas);
-
-  return parsedIdeas;
+  return ideas;
 };

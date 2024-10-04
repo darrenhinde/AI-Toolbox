@@ -1,6 +1,6 @@
-import { generateText, tool } from 'ai';
+import { generateObject, tool } from 'ai';
 import { z } from 'zod';
-import { openai } from '@ai-sdk/openai';
+import { getModel } from '../models/index';
 import { languageQualityAgent } from './language-quality-agent';
 
 const ContentEditorInput = z.object({
@@ -52,8 +52,9 @@ const readabilityCheckTool = tool({
 
 export const contentEditor = async (input: z.infer<typeof ContentEditorInput>): Promise<z.infer<typeof FinalContentsOutput>> => {
   const { contentDrafts, styleGuidelines } = input;
+  const model = getModel();
 
-  const systemPrompt = `
+  const prompt = `
 You are a Content Editor with a keen eye for detail. Your task is to review and refine content drafts, ensuring they meet quality standards and adhere to style guidelines.
 
 Key Objectives:
@@ -62,32 +63,19 @@ Key Objectives:
 - Verify the effectiveness of hooks and calls to action.
 - Provide constructive feedback in editor comments.
 
-You have access to the following tools:
-- grammarCheck: To identify and correct grammatical errors.
-- readabilityCheck: To assess and improve readability.
-
-Use these tools as needed to enhance the content.
-`;
-
-  const userPrompt = `Content Drafts: ${JSON.stringify(contentDrafts)}
+Content Drafts: ${JSON.stringify(contentDrafts)}
 Style Guidelines: ${styleGuidelines}
 
 Review and finalize the content drafts.
 `;
 
-  // Multi-step process with tools
-  const { text } = await generateText({
-    model: openai('gpt-4'),
-    prompt: systemPrompt + '\n' + userPrompt,
-    tools: { grammarCheckTool, readabilityCheckTool },
-    maxSteps: 5,
+  const { object: finalContents } = await generateObject({
+    model,
+    schema: FinalContentsOutput,
+    prompt,
     maxTokens: 2000,
     temperature: 0.7,
   });
 
-  // Parse the response and validate it against the FinalContentsOutput schema
-  const finalContents = JSON.parse(text);
-  const parsedFinalContents = FinalContentsOutput.parse(finalContents);
-
-  return parsedFinalContents;
+  return finalContents;
 };

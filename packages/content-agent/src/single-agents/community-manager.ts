@@ -1,6 +1,6 @@
-import { generateText, tool } from 'ai';
+import { generateObject } from 'ai';
 import { z } from 'zod';
-import { openai } from '@ai-sdk/openai';
+import { getModel } from '../models/index';
 import { audienceInteractionAgent } from './audience-interaction-agent';
 
 const CommunityManagerInput = z.object({
@@ -32,23 +32,11 @@ const EngagementActivity = z.object({
 
 const EngagementActivitiesOutput = z.array(EngagementActivity);
 
-// Tool to generate responses
-const generateResponseTool = tool({
-  description: 'Generate a personalized response to audience interactions.',
-  parameters: z.object({
-    interactionType: z.enum(['Comment', 'Message', 'Like', 'ProfileView']),
-    userName: z.string(),
-    content: z.string().optional(),
-  }),
-  execute: async ({ interactionType, userName, content }) => {
-    return audienceInteractionAgent.generatePersonalizedResponse(interactionType, userName, content);
-  },
-});
-
 export const communityManager = async (input: z.infer<typeof CommunityManagerInput>): Promise<z.infer<typeof EngagementActivitiesOutput>> => {
   const { scheduledPosts, audienceData } = input;
+  const model = getModel();
 
-  const systemPrompt = `
+  const prompt = `
 You are a Community Manager responsible for engaging with the audience. Your tasks include responding to comments and messages, leaving comments on other users' posts, and sending appreciation messages.
 
 Key Objectives:
@@ -56,30 +44,18 @@ Key Objectives:
 - Personalize responses to foster engagement.
 - Keep track of all engagement activities.
 
-You have access to the following tool:
-- generateResponse: To create personalized responses.
-
-Use this tool to craft appropriate messages.
-`;
-
-  const userPrompt = `Audience Data: ${JSON.stringify(audienceData)}
+Audience Data: ${JSON.stringify(audienceData)}
 
 Generate engagement activities based on the audience interactions.
 `;
 
-  // Multi-step process with tools
-  const { text } = await generateText({
-    model: openai('gpt-4'),
-    prompt: systemPrompt + '\n' + userPrompt,
-    tools: { generateResponseTool },
-    maxSteps: 10,
+  const { object: activities } = await generateObject({
+    model,
+    schema: EngagementActivitiesOutput,
+    prompt,
     maxTokens: 2000,
     temperature: 0.7,
   });
 
-  // Parse the response and validate it against the EngagementActivitiesOutput schema
-  const activities = JSON.parse(text);
-  const parsedActivities = EngagementActivitiesOutput.parse(activities);
-
-  return parsedActivities;
+  return activities;
 };

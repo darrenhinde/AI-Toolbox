@@ -16,7 +16,14 @@
     "@ai-sdk/openai": "^0.0.63",
     "@ai-toolbox/notion": "workspace:*",
     "@notionhq/client": "^2.2.15",
+    "@opentelemetry/api-logs": "^0.53.0",
+    "@opentelemetry/instrumentation": "^0.53.0",
+    "@opentelemetry/sdk-logs": "^0.53.0",
+    "@vercel/otel": "^1.10.0",
     "ai": "^3.4.7",
+    "install": "^0.13.0",
+    "langfuse": "^3.27.0",
+    "langfuse-vercel": "^3.27.0",
     "ollama-ai-provider": "^0.15.1",
     "zod": "^3.23.8"
   }

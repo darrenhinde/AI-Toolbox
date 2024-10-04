@@ -50,9 +50,11 @@ export function getModel(specifiedModel?: string) {
     ) || operationalModels[0];
     selectedModel = specifiedModel;
   } else {
-    // Default to OpenAI if available, otherwise use the first operational model
-    selectedConfig = operationalModels.find(config => config.provider === 'openai') || operationalModels[0];
-    selectedModel = selectedConfig.models[0];
+    // Default to OpenAI's gpt-4o-mini if available, otherwise use the first operational model
+    selectedConfig = operationalModels.find(config => 
+      config.provider === 'openai' && config.models.includes('gpt-4o-mini')
+    ) || operationalModels[0];
+    selectedModel = selectedConfig.provider === 'openai' ? 'gpt-4o-mini' : selectedConfig.models[0];
   }
 
   switch (selectedConfig.provider) {

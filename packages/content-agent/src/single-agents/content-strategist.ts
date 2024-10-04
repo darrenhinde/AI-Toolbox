@@ -1,6 +1,6 @@
-import { generateText } from 'ai';
+import { generateObject } from 'ai';
 import { z } from 'zod';
-import { openai } from '@ai-sdk/openai';
+import { getModel } from '../models/index';
 
 const ContentStrategistInput = z.object({
   contentIdeas: z.array(z.object({
@@ -28,8 +28,9 @@ const ContentPlanOutput = z.array(ContentPlanItem);
 
 export const contentStrategist = async (input: z.infer<typeof ContentStrategistInput>): Promise<z.infer<typeof ContentPlanOutput>> => {
   const { contentIdeas, campaignGoals, targetPlatforms } = input;
+  const model = getModel();
 
-  const systemPrompt = `
+  const prompt = `
 You are a Content Strategist. Your task is to refine the given content ideas and develop a strategic content plan. The plan should align with the following campaign goals: ${campaignGoals.join(', ')}. The target platforms are: ${targetPlatforms.join(', ')}.
 
 For each content idea, create a plan with:
@@ -41,20 +42,17 @@ For each content idea, create a plan with:
 - scheduledDate: Proposed date for publishing.
 
 Ensure that the plan maximizes relevance and impact.
+
+Content Ideas: ${JSON.stringify(contentIdeas)}
 `;
 
-  const userPrompt = `Content Ideas: ${JSON.stringify(contentIdeas)}`;
-
-  const response = await generateText({
-    model: openai('gpt-4'),
-    prompt: systemPrompt + '\n' + userPrompt,
+  const { object: plan } = await generateObject({
+    model,
+    schema: ContentPlanOutput,
+    prompt,
     maxTokens: 1500,
     temperature: 0.7,
   });
 
-  // Parse the response and validate it against the ContentPlanOutput schema
-  const plan = JSON.parse(response.text);
-  const parsedPlan = ContentPlanOutput.parse(plan);
-
-  return parsedPlan;
+  return plan;
 };

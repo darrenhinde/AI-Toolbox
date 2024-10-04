@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { tool } from 'ai';
 import { NotionClient, DatabaseAPI, PageAPI } from '../../../notion/src/notion';
-import type { QueryDatabaseParameters } from "@notionhq/client/build/src/api-endpoints";
+import type { QueryDatabaseParameters, CreatePageParameters, BlockObjectRequest } from "@notionhq/client/build/src/api-endpoints";
 
 const NOTION_API_KEY = process.env.NOTION_API_KEY || '';
 const notionClient = new NotionClient(NOTION_API_KEY);
@@ -22,8 +22,12 @@ const CreateDatabaseParameters = z.object({
   isInline: z.boolean().optional().describe('Whether the database should be inline or not'),
 });
 
+/**
+ * Tool for creating a new Notion database
+ * @description Creates a new Notion database with specified properties. Use this to set up structured data in Notion for content management, task tracking, or any other organizational needs.
+ */
 export const CreateDatabaseTool = tool({
-  description: 'Creates a new Notion database with specified properties. Use this to set up structured data in Notion.',
+  description: 'Creates a new Notion database with specified properties. Useful for setting up structured data for content management, task tracking, or other organizational needs.',
   parameters: CreateDatabaseParameters,
   execute: async ({ parentPageId, title, properties, isInline }) => {
     try {
@@ -71,19 +75,24 @@ export const CreateDatabaseTool = tool({
   },
 });
 
+/**
+ * Tool for adding a new page to a Notion database
+ * @description Adds a new page to a specified Notion database with the given properties. Use this to create new entries in your content management system, task list, or any other structured database.
+ */
 export const AddPageToDatabaseTool = tool({
-  description: 'Adds a new page to a Notion database',
+  description: 'Adds a new page to a Notion database with specified properties. Useful for creating new entries in content management systems, task lists, or any structured database.',
   parameters: z.object({
     databaseId: z.string().describe('The ID of the database to add the page to'),
     properties: z.record(z.any()).describe('The properties of the new page'),
   }),
   execute: async ({ databaseId, properties }) => {
     try {
-      const newPage = await pageAPI.createPage({
+      const createPageParams: CreatePageParameters = {
         parent: { database_id: databaseId },
         properties: properties,
-      });
-      return { pageId: newPage.id, message: 'Page added successfully to the database' };
+      };
+      const newPage = await pageAPI.createPage(databaseId, 'New Page', JSON.stringify(properties));
+      return { pageId: newPage, message: 'Page added successfully to the database' };
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(`Failed to add page to database: ${error.message}`);
@@ -94,8 +103,12 @@ export const AddPageToDatabaseTool = tool({
   },
 });
 
+/**
+ * Tool for querying a Notion database
+ * @description Queries a Notion database with specified filters and sorts. Use this to retrieve data from your Notion databases for analysis, reporting, or display purposes.
+ */
 export const QueryDatabaseTool = tool({
-  description: 'Queries a Notion database with specified filters and sorts. Use this to retrieve data from a Notion database.',
+  description: 'Queries a Notion database with specified filters and sorts. Useful for retrieving data from Notion databases for analysis, reporting, or display purposes.',
   parameters: z.object({
     databaseId: z.string().describe('The ID of the database to query'),
     filter: z.object({}).optional().describe('An optional filter to apply to the query'),
@@ -125,120 +138,3 @@ export const QueryDatabaseTool = tool({
     }
   },
 });
-
-/**
- * Function to create a content database in Notion
- */
-export async function createContentDatabase(parentPageId: string): Promise<string> {
-  const title = 'Content Workflow Database';
-  const properties = {
-    'Title': { title: {} },
-    'Status': { select: { options: [{ name: 'Idea' }, { name: 'Planned' }, { name: 'Drafted' }, { name: 'Finalized' }, { name: 'Scheduled' }, { name: 'Published' }] } },
-    'Created At': { date: {} },
-    'Scheduled Date': { date: {} },
-    'Platform': { multi_select: { options: [{ name: 'LinkedIn' }, { name: 'Twitter' }, { name: 'Facebook' }, { name: 'Instagram' }] } },
-    // Add more properties as needed
-  };
-
-  const createParams = {
-    parent: { page_id: parentPageId },
-    title: [{ type: 'text' as const, text: { content: title } }],
-    properties: properties,
-  };
-
-  try {
-    const newDatabase = await databaseAPI.createDatabase(createParams);
-    return newDatabase.id;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`Failed to create database: ${error.message}`);
-    } else {
-      throw new Error('An unknown error occurred while creating the database');
-    }
-  }
-}
-
-/**
- * Function to add a content page to the database
- */
-export async function addContentPage(databaseId: string, contentData: any): Promise<string> {
-  const properties = {
-    'Title': {
-      title: [{ text: { content: contentData.title } }],
-    },
-    'Status': {
-      select: { name: 'Idea' },
-    },
-    'Created At': {
-      date: { start: new Date().toISOString() },
-    },
-    'Scheduled Date': {
-      date: { start: contentData.scheduledDate },
-    },
-    'Platform': {
-      multi_select: contentData.platforms.map((platform: string) => ({ name: platform })),
-    },
-  };
-
-  try {
-    const newPage = await pageAPI.createPage({
-      parent: { database_id: databaseId },
-      properties: properties,
-    });
-    return newPage.id;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`Failed to add page to database: ${error.message}`);
-    } else {
-      throw new Error('An unknown error occurred while adding the page to the database');
-    }
-  }
-}
-
-/**
- * Function to update a content page with detailed information
- */
-export async function updateContentPage(pageId: string, contentDetails: any): Promise<void> {
-  const blocks = [
-    {
-      object: 'block',
-      type: 'heading_2',
-      heading_2: {
-        text: [{ type: 'text', text: { content: 'Content Plan' } }],
-      },
-    },
-    {
-      object: 'block',
-      type: 'paragraph',
-      paragraph: {
-        text: [{ type: 'text', text: { content: JSON.stringify(contentDetails.contentPlan, null, 2) } }],
-      },
-    },
-    // Add more blocks for each agent's output
-    {
-      object: 'block',
-      type: 'heading_2',
-      heading_2: {
-        text: [{ type: 'text', text: { content: 'Content Draft' } }],
-      },
-    },
-    {
-      object: 'block',
-      type: 'paragraph',
-      paragraph: {
-        text: [{ type: 'text', text: { content: contentDetails.contentDraft } }],
-      },
-    },
-    // Continue with other sections
-  ];
-
-  try {
-    await pageAPI.appendBlockChildren(pageId, blocks);
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`Failed to update page: ${error.message}`);
-    } else {
-      throw new Error('An unknown error occurred while updating the page');
-    }
-  }
-}

@@ -1,17 +1,18 @@
-import { generateText, tool } from 'ai';
+import { generateObject } from 'ai';
 import { z } from 'zod';
-import { openai } from '@ai-sdk/openai';
+import { getModel } from '../models/index';
 import { textEnhancementAgent } from './text-enhancement-agent';
+import { generateText, tool } from 'ai';
 
 const ContentWriterInput = z.object({
-  contentPlan: z.array(z.object({
+  contentPlan: z.object({
     ideaId: z.string().uuid(),
     title: z.string(),
     objectives: z.array(z.string()),
     platforms: z.array(z.enum(['LinkedIn', 'Twitter', 'Facebook', 'Instagram'])),
     keyMessages: z.array(z.string()),
     scheduledDate: z.date(),
-  })),
+  }),
   styleGuidelines: z.string(),
   templates: z.array(z.string()),
   hooks: z.array(z.string()),
@@ -26,8 +27,6 @@ const ContentDraft = z.object({
   sources: z.array(z.string().url()).optional(),
   createdAt: z.date(),
 });
-
-const ContentDraftsOutput = z.array(ContentDraft);
 
 // Tools
 const rewordTool = tool({
@@ -52,10 +51,11 @@ const rewriteTool = tool({
   },
 });
 
-export const contentWriter = async (input: z.infer<typeof ContentWriterInput>): Promise<z.infer<typeof ContentDraftsOutput>> => {
+export const contentWriter = async (input: z.infer<typeof ContentWriterInput>): Promise<z.infer<typeof ContentDraft>> => {
   const { contentPlan, styleGuidelines, templates, hooks } = input;
+  const model = getModel();
 
-  const systemPrompt = `
+  const prompt = `
 You are a Content Writer with excellent writing skills. Your role is to craft compelling content based on the provided content plan. Follow the style guidelines and use the available templates and hooks.
 
 Key Objectives:
@@ -66,34 +66,21 @@ Key Objectives:
 - End with a P.S. question to encourage engagement.
 - Provide sources and citations where necessary.
 
-You have access to the following tools:
-- reword: To improve clarity while keeping the original meaning.
-- rewrite: To adjust the text according to a specific style and intent.
-
-Use the tools when necessary to enhance the content.
-`;
-
-  const userPrompt = `Content Plan: ${JSON.stringify(contentPlan)}
+Content Plan: ${JSON.stringify(contentPlan)}
 Style Guidelines: ${styleGuidelines}
 Templates: ${templates.join(', ')}
 Hooks: ${hooks.join(', ')}
 
-Create content drafts for each item in the content plan.
+Create a single content draft based on the content plan.
 `;
 
-  // Multi-step process with tools
-  const { text } = await generateText({
-    model: openai('gpt-4'),
-    prompt: systemPrompt + '\n' + userPrompt,
-    tools: { rewordTool, rewriteTool },
-    maxSteps: 5,
+  const { object: draft } = await generateObject({
+    model,
+    schema: ContentDraft,
+    prompt,
     maxTokens: 2000,
     temperature: 0.7,
   });
 
-  // Parse the response and validate it against the ContentDraftsOutput schema
-  const drafts = JSON.parse(text);
-  const parsedDrafts = ContentDraftsOutput.parse(drafts);
-
-  return parsedDrafts;
+  return draft;
 };
