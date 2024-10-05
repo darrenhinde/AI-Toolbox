@@ -6,26 +6,21 @@ import { generateText, tool } from 'ai';
 
 const ContentWriterInput = z.object({
   contentPlan: z.object({
-    ideaId: z.string().uuid(),
     title: z.string(),
-    objectives: z.array(z.string()),
-    platforms: z.array(z.enum(['LinkedIn', 'Twitter', 'Facebook', 'Instagram'])),
-    keyMessages: z.array(z.string()),
-    scheduledDate: z.date(),
+    objective: z.string(),
+    platform: z.enum(['LinkedIn', 'Twitter', 'Facebook', 'Instagram']),
+    keyMessage: z.string(),
   }),
-  styleGuidelines: z.string(),
-  templates: z.array(z.string()),
-  hooks: z.array(z.string()),
+  styleGuideline: z.string(),
+  template: z.string(),
+  hook: z.string(),
 });
 
 const ContentDraft = z.object({
-  planItemId: z.string().uuid(),
-  title: z.string(),
-  body: z.string(),
-  hook: z.string(),
-  callToAction: z.string(),
-  sources: z.array(z.string().url()).optional(),
-  createdAt: z.date(),
+  title: z.string().describe('The main title of the content'),
+  body: z.string().describe('The main content of the post'),
+  hook: z.string().describe('An engaging opening line to capture attention'),
+  callToAction: z.string().describe('A prompt encouraging user engagement or action'),
 });
 
 // Tools
@@ -52,24 +47,24 @@ const rewriteTool = tool({
 });
 
 export const contentWriter = async (input: z.infer<typeof ContentWriterInput>): Promise<z.infer<typeof ContentDraft>> => {
-  const { contentPlan, styleGuidelines, templates, hooks } = input;
+  const { contentPlan, styleGuideline, template, hook } = input;
   const model = getModel();
 
   const prompt = `
-You are a Content Writer with excellent writing skills. Your role is to craft compelling content based on the provided content plan. Follow the style guidelines and use the available templates and hooks.
+You are a Content Writer crafting compelling content based on the provided plan. Follow the style guideline and use the template and hook.
 
 Key Objectives:
-- Use engaging one-liner hooks from the provided list.
+- Use the engaging one-liner hook provided.
 - Write in a conversational tone, as if presenting on stage.
-- Focus on one topic per post for clarity.
+- Focus on one topic for clarity.
 - Use parentheses for emphasis.
 - End with a P.S. question to encourage engagement.
-- Provide sources and citations where necessary.
+- Provide a source or citation if necessary.
 
 Content Plan: ${JSON.stringify(contentPlan)}
-Style Guidelines: ${styleGuidelines}
-Templates: ${templates.join(', ')}
-Hooks: ${hooks.join(', ')}
+Style Guideline: ${styleGuideline}
+Template: ${template}
+Hook: ${hook}
 
 Create a single content draft based on the content plan.
 `;
@@ -78,7 +73,7 @@ Create a single content draft based on the content plan.
     model,
     schema: ContentDraft,
     prompt,
-    maxTokens: 2000,
+    maxTokens: 1000,
     temperature: 0.7,
   });
 

@@ -3,6 +3,7 @@ import { tool } from 'ai';
 import { NotionClient, DatabaseAPI, PageAPI } from '../../../notion/src/notion';
 import type { QueryDatabaseParameters, CreatePageParameters, BlockObjectRequest } from "@notionhq/client/build/src/api-endpoints";
 
+
 function initializeNotionClient(apiType: 'database' | 'page' | 'both') {
   const NOTION_API_KEY = process.env.NOTION_API_KEY || '';
   const notionClient = new NotionClient(NOTION_API_KEY);
@@ -25,6 +26,7 @@ export const ContentDatabaseSchema = z.object({
   Status: z.enum(['Idea', 'Planned', 'Drafted', 'Finalized', 'Scheduled', 'Published']),
   'Created At': z.date(),
   'Scheduled Date': z.date().optional(),
+  Post: z.string(),
   Platform: z.array(z.enum(['LinkedIn', 'Twitter', 'Facebook', 'Instagram'])),
 });
 
@@ -36,14 +38,18 @@ export function generateNotionDatabaseProperties(schema: typeof ContentDatabaseS
 
   for (const [key, value] of Object.entries(schema.shape)) {
     if (value instanceof z.ZodString) {
-      properties[key] = { title: {} };
+      if (key === 'Title') {
+        properties[key] = { title: {} };
+      } else {
+        properties[key] = { rich_text: {} };
+      }
     } else if (value instanceof z.ZodEnum) {
       properties[key] = { 
         select: { 
           options: value.options.map(option => ({ name: option }))
         } 
       };
-    } else if (value instanceof z.ZodDate) {
+    } else if (value instanceof z.ZodDate || (value instanceof z.ZodOptional && value._def.innerType instanceof z.ZodDate)) {
       properties[key] = { date: {} };
     } else if (value instanceof z.ZodArray && value.element instanceof z.ZodEnum) {
       properties[key] = { 
@@ -52,7 +58,7 @@ export function generateNotionDatabaseProperties(schema: typeof ContentDatabaseS
         } 
       };
     } else {
-      throw new Error(`Unsupported Zod type for key: ${key}`);
+      console.warn(`Unsupported Zod type for key: ${key}. Skipping this property.`);
     }
   }
 
@@ -60,35 +66,39 @@ export function generateNotionDatabaseProperties(schema: typeof ContentDatabaseS
 }
 
 export function generateNotionDatabasePropertiesStrings(schema: typeof ContentDatabaseSchema) {
-    return (data: ContentDatabaseProperties): CreatePageParameters['properties'] => {
-      const properties: CreatePageParameters['properties'] = {};
-  
-      for (const [key, value] of Object.entries(schema.shape)) {
-        if (value instanceof z.ZodString) {
+  return (data: ContentDatabaseProperties): CreatePageParameters['properties'] => {
+    const properties: CreatePageParameters['properties'] = {};
+
+    for (const [key, value] of Object.entries(schema.shape)) {
+      if (value instanceof z.ZodString) {
+        if (key === 'Title') {
           properties[key] = { title: [{ text: { content: data[key as keyof ContentDatabaseProperties] as string } }] };
-        } else if (value instanceof z.ZodEnum) {
-          properties[key] = { select: { name: data[key as keyof ContentDatabaseProperties] as string } };
-        } else if (value instanceof z.ZodDate) {
-          properties[key] = { date: { start: (data[key as keyof ContentDatabaseProperties] as Date).toISOString() } };
-        } else if (value instanceof z.ZodArray && value.element instanceof z.ZodEnum) {
-          properties[key] = { multi_select: (data[key as keyof ContentDatabaseProperties] as string[]).map(item => ({ name: item })) };
+        } else {
+          properties[key] = { rich_text: [{ text: { content: data[key as keyof ContentDatabaseProperties] as string } }] };
         }
+      } else if (value instanceof z.ZodEnum) {
+        properties[key] = { select: { name: data[key as keyof ContentDatabaseProperties] as string } };
+      } else if (value instanceof z.ZodDate) {
+        properties[key] = { date: { start: (data[key as keyof ContentDatabaseProperties] as Date).toISOString() } };
+      } else if (value instanceof z.ZodArray && value.element instanceof z.ZodEnum) {
+        properties[key] = { multi_select: (data[key as keyof ContentDatabaseProperties] as string[]).map(item => ({ name: item })) };
       }
-  
-      return properties;
-    };
-  }
+    }
+
+    return properties;
+  };
+}
 
 export const NotionDatabaseProperties = generateNotionDatabaseProperties(ContentDatabaseSchema);
 
 /**
  * Creates a content database in Notion
  * @param parentPageId The ID of the parent page where the database will be created
+ * @param title The title of the database
  * @returns The ID of the newly created database
  */
-export async function createContentDatabase(parentPageId: string): Promise<string> {
+export async function createContentDatabase(parentPageId: string, title: string): Promise<string> {
   const { databaseAPI } = initializeNotionClient('database');
-  const title = 'Content Workflow Database';
   const properties = NotionDatabaseProperties;
 
   const createParams = {
@@ -143,14 +153,21 @@ export async function addContentPage(databaseId: string, contentData: ContentDat
     }
   }
 }
-
 /**
  * Updates a content page with detailed information
  * @param pageId The ID of the page to update
  * @param contentDetails The detailed content to add to the page
  */
-export async function updateContentPage(pageId: string, contentDetails: any): Promise<void> {
+export async function updateContentPage(pageId: string, contentDetails: { contentPlan: Record<string, unknown>, contentDraft: string }): Promise<void> {
   const { pageAPI } = initializeNotionClient('page');
+  
+  let contentPlanString: string;
+  try {
+    contentPlanString = JSON.stringify(contentDetails.contentPlan, null, 2);
+  } catch (error) {
+    throw new Error(`Failed to stringify contentPlan: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+
   const blocks: BlockObjectRequest[] = [
     {
       object: 'block',
@@ -163,7 +180,7 @@ export async function updateContentPage(pageId: string, contentDetails: any): Pr
       object: 'block',
       type: 'paragraph',
       paragraph: {
-        rich_text: [{ type: 'text', text: { content: JSON.stringify(contentDetails.contentPlan, null, 2) } }],
+        rich_text: [{ type: 'text', text: { content: contentPlanString } }],
       },
     },
     {
@@ -180,7 +197,6 @@ export async function updateContentPage(pageId: string, contentDetails: any): Pr
         rich_text: [{ type: 'text', text: { content: contentDetails.contentDraft } }],
       },
     },
-    // Add more blocks for each section of content
   ];
 
   try {
