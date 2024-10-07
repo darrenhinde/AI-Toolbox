@@ -17,11 +17,11 @@ export const audienceInteractionAgent = {
     const model = getModel();
 
     const prompt = `Generate a personalized response for the following interaction:
-Interaction Type: ${input.interactionType}
-User Name: ${input.userName}
-Content: ${input.content || 'N/A'}
+      Interaction Type: ${input.interactionType}
+      User Name: ${input.userName}
+      Content: ${input.content || 'N/A'}
 
-The response should be friendly, engaging, and appropriate for the interaction type.`;
+      The response should be friendly, engaging, and appropriate for the interaction type.`;
 
     const { object: personalizedResponse } = await generateObject({
       model,
